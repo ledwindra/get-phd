@@ -130,7 +130,5 @@ dmypy.json
 
 # Other
 .vscode
-host.txt
-by_direktori_yearly.json
-util/
 .DS_Store
+*.ipynb
