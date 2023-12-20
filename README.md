@@ -7,7 +7,10 @@ My motivation here is to evaluate which model that's suitable for this kind of s
 
 I hope you enjoy this repository!
 
-# Model(s) used
+# Samples used
+Currently I use profiles from each faculty members in top five public policy analysis schools in the United States, based on U.S. News [rankings](https://www.usnews.com/best-graduate-schools/top-public-affairs-schools/public-policy-analysis-rankings). The point here is not about the rankings. Let's settle the debate in another forum (to which I'm not an expert).
+
+# Models used
 Note that for every model, I don't do any fine-tuning. In addition, every parameter is set to default.
 
 ## Google Gemini API

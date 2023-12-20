@@ -71,19 +71,29 @@ models = [
     # YOSO
 ]
 
-def qna(model_name, question):
-    """Model name: vumichien/albert-base-v2-squad2
-    Question 1: Is there any information on where the person attended their Ph.D. program? Answer with the following format: YES/NO
-    Question 2: If there is not any information on where the person attended their Ph.D. program, return NONE. Otherwise, where did the person receive their Ph.D. program? Answer with the following format: UNIVERSITY_NAME
-    """
+def qna(number):
+    if number == 1:
+        question = "Is there any information on where the person attended their Ph.D. program? Answer with the following format: YES/NO"
+    else:
+        question = "Where did the person receive their Ph.D. program? If there is not any information, return NONE. Otherwise, answer with the following format: UNIVERSITY_NAME"
+
+    return question
+
+
+def dataset(model_name):
     df = pd.read_csv("../data/faculty-raw.csv", sep="|")
     df["has_phd_info"] = ""
-    # df["phd_where"] = ""
+    df["phd_where"] = ""
     question_answerer = pipeline("question-answering", model=model_name)
     for index, row in df.iterrows():
-        response = question_answerer(question=question, context=row["bio"])
-        df.loc[index, "has_phd_info"] = response["answer"]
-        # df.loc[index, "phd_where"] = func(response, 1)
+        try:
+            response1 = question_answerer(question=qna(1), context=row["bio"])
+            response2 = question_answerer(question=qna(2), context=row["bio"])
+            df.loc[index, "has_phd_info"] = response1["answer"]
+            df.loc[index, "phd_where"] = response2["answer"]
+        except ValueError:
+            df.loc[index, "has_phd_info"] = "VALUE ERROR"
+            df.loc[index, "phd_where"] = "VALUE ERROR"
     df.drop("bio", axis=1, inplace=True)
     df = df.apply(lambda x: x.str.upper())
     output_file = model_name.replace("/", "-")

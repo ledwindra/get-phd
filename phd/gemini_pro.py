@@ -1,6 +1,7 @@
 import google.generativeai as genai
 import pandas as pd
 
+
 def api_key():
     api_key = input("Please input your API key: ")
     
@@ -41,30 +42,35 @@ def safety_settings():
     return ss
 
 
-def model(generation_config, safety_settings, context):
+def model(generation_config, safety_settings, context, question):
     model = genai.GenerativeModel(model_name="gemini-pro", generation_config=generation_config,safety_settings=safety_settings)
-    question1 = "Is there any information on where the person attended their Ph.D. program? Answer with the following format: question1=YES/NO"
-    question2 = "If the answer is NO, return NONE. If the answer is YES, where did the person receive their Ph.D. program? Answer with the following format: question2=UNIVERSITY_NAME"
-    prompt_parts = [f"context={context}\n\nquestion1={question1}\n\nquestion2={question2}"]
+    prompt_parts = [f"context={context}\n\nquestion={question}"]
     response = model.generate_content(prompt_parts)
     
     return response
 
 
+def qna(number):
+    if number == 1:
+        question = "Is there any information on where the person attended their Ph.D. program? Answer with the following format: YES/NO"
+    else:
+        question = "Where did the person receive their Ph.D. program? If there is not any information, return NONE. Otherwise, answer with the following format: UNIVERSITY_NAME"
+
+    return question
+
+
 def dataset():
     gc = generation_config()
     ss = safety_settings()
-    func = lambda response, x: response[x].split("=")[1].replace("\"", "")
     df = pd.read_csv("../data/faculty-raw.csv", sep="|")
     df["model_name"] = "GEMINI PRO"
     df["has_phd_info"] = ""
     df["phd_where"] = ""
     for index, row in df.iterrows():
-        response = model(gc, ss, row["bio"])
-        response = response.text
-        response = response.split("\n")
-        df.loc[index, "has_phd_info"] = func(response, 0)
-        df.loc[index, "phd_where"] = func(response, 1)
+        response1 = model(gc, ss, row["bio"], qna(1)).text
+        response2 = model(gc, ss, row["bio"], qna(2)).text
+        df.loc[index, "has_phd_info"] = response1
+        df.loc[index, "phd_where"] = response2
         print(df.loc[index].to_dict())
     df.drop("bio", axis=1, inplace=True)
     df = df.apply(lambda x: x.str.upper())
