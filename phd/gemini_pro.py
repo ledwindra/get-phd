@@ -1,8 +1,12 @@
 import google.generativeai as genai
+import os
 import pandas as pd
+from time import sleep
+from tqdm import tqdm
 
 
 def api_key():
+    # don't hardcode API key
     api_key = input("Please input your API key: ")
     
     return genai.configure(api_key=api_key)
@@ -20,6 +24,7 @@ def generation_config():
 
 
 def safety_settings():
+    # BLOCK_NONE to avoid any hassle
     ss = [
         {
             "category": "HARM_CATEGORY_HARASSMENT",
@@ -50,7 +55,8 @@ def model(generation_config, safety_settings, context, question):
     return response
 
 
-def qna(number):
+def get_question(number):
+    # i have two questions
     if number == 1:
         question = "Is there any information on where the person attended their Ph.D. program? Answer with the following format: YES/NO"
     else:
@@ -66,13 +72,25 @@ def dataset():
     df["model_name"] = "GEMINI PRO"
     df["has_phd_info"] = ""
     df["phd_where"] = ""
-    for index, row in df.iterrows():
-        response1 = model(gc, ss, row["bio"], qna(1)).text
-        response2 = model(gc, ss, row["bio"], qna(2)).text
+    # use tqdm for show a progress bar
+    for index, row in tqdm(df.iterrows(), total=df.shape[0], desc="Progress"):
+        # sleep for half a second to avoid exceeding 60 qpm (https://ai.google.dev/pricing)
+        response1 = model(gc, ss, row["bio"], get_question(1)).text
+        sleep(0.25)
+        response2 = model(gc, ss, row["bio"], get_question(2)).text
+        sleep(0.25)
         df.loc[index, "has_phd_info"] = response1
         df.loc[index, "phd_where"] = response2
-        print(df.loc[index].to_dict())
     df.drop("bio", axis=1, inplace=True)
+    # reading old file just in case i run this model later
+    if os.path.exists("../data/faculty-raw.csv"):
+        gemini = pd.read_csv("../data/gemini-pro.csv", sep="|")
+        df = pd.concat([df, gemini], sort=False)
+    df = df.apply(lambda x: x.str.upper())
+    # but duplicates are not allowed, so they must be dropped
+    df.drop_duplicates(inplace=True)
+    # sorting names in ascending order
+    df.sort_values(by="name", ascending=True, inplace=True)
     df = df.apply(lambda x: x.str.upper())
 
     return df.to_csv("../data/gemini-pro.csv", index=False, sep="|")

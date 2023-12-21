@@ -25,9 +25,45 @@ def df_processing(df, faculty_of):
     if os.path.exists("../data/faculty-raw.csv"):
         raw = pd.read_csv("../data/faculty-raw.csv", sep="|")
         df = pd.concat([df, raw], sort=False)
+    df = df.apply(lambda x: x.str.upper())
     df.drop_duplicates(inplace=True)
     df.sort_values(by="name", ascending=True, inplace=True)
     df.to_csv("../data/faculty-raw.csv", index=False, sep="|")
+
+
+class BerkeleyGoldman:
+    def get_directory(self):
+        url = "https://gspp.berkeley.edu/research-and-impact/faculty"
+        html = make_request(url)
+        directory = html.find("div", {"class": "grid gap-xs"})
+        directory = [x["href"] for x in directory.find_all("a")]
+
+        return directory
+
+
+    def get_name(self, html):
+        name = html.find("li", {"class": "toc__label"}).text.strip().upper()
+
+        return name
+
+
+    def get_bio(self, html):
+        bio = "".join([x.text for x in html.select("section.text-component")[0].find_all("p")]).strip().upper()
+
+        return bio
+    
+
+    def get_data(self):
+        faculties = self.get_directory()
+        df = []
+        for faculty in faculties:
+            f = make_request(faculty)
+            name = self.get_name(f)
+            bio = self.get_bio(f)
+            data = {"name": name, "bio": bio}
+            df.append(data)
+        
+        df_processing(df, "GOLDMAN SCHOOL OF PUBLIC POLICY")
 
 
 class ChicagoHarris:
@@ -78,42 +114,6 @@ class ChicagoHarris:
         df_processing(df, "HARRIS SCHOOL OF PUBLIC POLICY")
 
 
-class ColumbiaSIPA:
-    def get_directory(self, page):
-        url = f"https://www.sipa.columbia.edu/communities-connections/faculty-directory?page={page}"
-        html = make_request(url)
-        directory = html.find_all("article", {"class": "cc--component-container cc--profile-card"})
-        directory = [x.find("a")["href"] for x in directory]
-        directory = [f"https://www.sipa.columbia.edu{x}" for x in directory]
-
-        return directory
-
-
-    def get_name(self, html):
-        name = html.find("div", {"class": "f--field f--page-title"}).find("h1").text
-
-        return name
-
-
-    def get_bio(self, html):
-        bio = "".join([x.text for x in html.find("div", {"class": "f--field f--wysiwyg"})]).replace("\n", " ").strip()
-
-        return bio
-    
-
-    def get_data(self):
-        faculties = self.get_directory("0")
-        df = []
-        for faculty in faculties:
-            f = make_request(faculty)
-            name = self.get_name(f)
-            bio = self.get_bio(f)
-            data = {"name": name, "bio": bio}
-            df.append(data)
-        
-        df_processing(df, "COLUMBIA SCHOOL OF INTERNATIONAL AND PUBLIC AFFAIRS")
-
-
 class HKS:
     def get_directory(self, page):
         url = f"https://www.hks.harvard.edu/faculty-profiles?page={page}"
@@ -125,25 +125,36 @@ class HKS:
         return directory
     
     def get_name(self, html):
-        name = html.find("h1", {"class": "page-title"}).text
+        name = html.find("h1", {"class": "page-title"}).text.upper()
         
         return name
     
     def get_bio(self, html):
-        bio = "".join([x.text for x in html.find("div", {"class": "profile-tab tab-selected"}).find_all("p")]).strip()
+        bio = "".join([x.text.upper() for x in html.find("div", {"class": "profile-tab tab-selected"}).find_all("p")]).strip()
 
         return bio
 
 
     def get_data(self):
-        faculties = self.get_directory("0")
+        page = 0
+        next = True
         df = []
-        for faculty in faculties:
-            f = make_request(faculty)
-            name = self.get_name(f)
-            bio = self.get_bio(f)
-            data = {"name": name, "bio": bio}
-            df.append(data)
+        while next == True:
+            print(f"HKS page: {page}")
+            pager = make_request(f"https://www.hks.harvard.edu/faculty-profiles?page={page}")
+            next = pager.find("li", {"class": "pager__item pager__item--next pagination-next"})
+            next = (next != None)
+            faculties = self.get_directory(page)
+            for faculty in faculties:
+                try:
+                    f = make_request(faculty)
+                    name = self.get_name(f)
+                    bio = self.get_bio(f)
+                    data = {"name": name, "bio": bio}
+                    df.append(data)
+                except AttributeError:
+                    pass
+            page += 1
         
         df_processing(df, "HARVARD KENNEDY SCHOOL")
     
@@ -160,13 +171,13 @@ class IndianaOneill:
     
 
     def get_name(self, html):
-        name = html.find("h2", {"class": "title"}).text
+        name = html.find("h2", {"class": "title"}).text.upper()
 
         return name
 
 
     def get_bio(self, html):
-        bio = "".join([x.text for x in html.find_all("li", {"itemprop": "degrees"})]).strip()
+        bio = "".join([x.text.upper() for x in html.find_all("li", {"itemprop": "degrees"})]).strip()
 
         return bio
     
@@ -195,25 +206,36 @@ class MichiganFord:
     
 
     def get_name(self, html):
-        name = html.find("strong").text.strip()
+        name = html.find("strong").text.strip().upper()
 
         return name
 
 
     def get_bio(self, html):
-        bio = "".join([x.text for x in html.select("#expertise-panel > div:nth-child(1) > div:nth-child(1)")[0]]).strip()
+        bio = "".join([x.text.upper() for x in html.select("#expertise-panel > div:nth-child(1) > div:nth-child(1)")[0]]).strip()
 
         return bio
 
 
     def get_data(self):
-        faculties = self.get_directory("0")
+        page = 0
+        next = True
         df = []
-        for faculty in faculties:
-            f = make_request(faculty)
-            name = self.get_name(f)
-            bio = self.get_bio(f)
-            data = {"name": name, "bio": bio}
-            df.append(data)
+        while next == True:
+            print(f"Ford School page: {page}")
+            pager = make_request(f"https://fordschool.umich.edu/directory?page={page}")
+            next = pager.find("a", {"class": "pager__link pager__link--next"})
+            next = (next != None)
+            faculties = self.get_directory(page)
+            for faculty in faculties:
+                try:
+                    f = make_request(faculty)
+                    name = self.get_name(f)
+                    bio = self.get_bio(f)
+                    data = {"name": name, "bio": bio}
+                    df.append(data)
+                except AttributeError:
+                    pass
+            page += 1
         
         df_processing(df, "FORD SCHOOL OF PUBLIC POLICY")

@@ -1,4 +1,5 @@
 import pandas as pd
+from tqdm import tqdm
 from transformers import pipeline
 
 models = [
@@ -13,62 +14,113 @@ models = [
     # BigBird-Pegassus
     "google/bigbird-pegasus-large-arxiv",
     # BLOOM
+    "bigscience/bloom", # not tested yet because of the size is too large
     # CamemBERT
+    "ydshieh/roberta-base-squad2",
     # CANINE
+    "Splend1dchan/canine-c-squad",
     # ConvBERT
-    # Data2VecText
+    "YituTech/conv-bert-base",
+    # Data2VecText -- not found on https://huggingface.co/docs/transformers/main/en/model_doc/data2vec-text
     # DeBERTa
+    "Palak/microsoft_deberta-large_squad",
     # DeBERTa-v2
+    "kamalkraj/deberta-v2-xlarge",
     # DistilBERT
+    "distilbert-base-uncased",
     # ELECTRA
-    # ERNIE
+    "bhadresh-savani/electra-base-squad2",
+    # ERNIE -- not found on https://huggingface.co/docs/transformers/model_doc/ernie#transformers.ErnieForQuestionAnswering
     # ErnieM
-    # Falcon
+    "susnato/ernie-m-base_pytorch",
+    # Falcon -- not found on https://huggingface.co/docs/transformers/model_doc/falcon#transformers.FalconForQuestionAnswering
     # FlauBERT
+    "flaubert/flaubert_base_cased",
     # FNet
+    "google/fnet-base",
     # Funnel Transformer
+    "funnel-transformer/small",
     # OpenAI GPT-2
+    "gpt2",
     # GPT Neo
+    "EleutherAI/gpt-neo-1.3B",
     # GPT NeoX
+    "trl-internal-testing/tiny-random-GPTNeoXForCausalLM",
     # GPT-J
+    "hf-internal-testing/tiny-random-gptj",
     # I-BERT
+    "kssteven/ibert-roberta-base",
     # LayoutLMv2
+    "microsoft/layoutlmv2-base-uncased",
     # LayoutLMv3
-    # LED,
+    "microsoft/layoutlmv3-base",
+    # LED
+    "allenai/led-base-16384",
     # LiLT
+    "SCUT-DLVCLab/lilt-roberta-en-base",
     # Longformer
+    "allenai/longformer-large-4096-finetuned-triviaqa",
     # LUKE
+    "studio-ousia/luke-base",
     # LXMERT
+    "unc-nlp/lxmert-base-uncased",
     # MarkupLM
+    "microsoft/markuplm-base-finetuned-websrc",
     # mBART
+    "facebook/mbart-large-cc25",
     # MEGA
+    "mnaylor/mega-base-wikitext",
     # Megatron-BERT
+    "nvidia/megatron-bert-cased-345m",
     # MobileBERT
+    "csarron/mobilebert-uncased-squad-v2"
     # MPNet
-    # MPT
+    "microsoft/mpnet-base",
+    # MPT -- not found on https://huggingface.co/docs/transformers/model_doc/mpt#transformers.MptForQuestionAnswering
     # MRA
+    "uw-madison/mra-base-512-4",
     # MT5
+    "google/mt5-small",
     # MVP
+    "RUCAIBox/mvp",
     # Nezha
+    "sijunhe/nezha-cn-base",
     # Nyströmformer
+    "uw-madison/nystromformer-512",
     # OPT
+    "facebook/opt-350m",
     # QDQBert
+    "bert-base-uncased",
     # Reformer
+    "google/reformer-crime-and-punishment",
     # RemBERT
+    "google/rembert",
     # RoBERTa
+    "deepset/roberta-base-squad2",
     # RoBERTa-PreLayerNorm
+    "andreasmadsen/efficient_mlm_m0.40",
     # RoCBert
+    "ArthurZ/dummy-rocbert-qa",
     # RoFormer
+    "junnyu/roformer_chinese_base",
     # Splinter
+    "tau/splinter-base",
     # SqueezeBERT
+    "squeezebert/squeezebert-uncased",
     # T5
-    # UMT5
+    "t5-small",
+    # UMT5 -- not found on https://huggingface.co/docs/transformers/model_doc/umt5
     # XLM
+    "xlm-mlm-en-2048"
     # XLM-RoBERTa
+    "deepset/roberta-base-squad2",
     # XLM-RoBERTa-X
+    "xlm-roberta-xlarge",
     # XLNet
-    # X-MOD
+    "xlnet-base-cased",
+    # X-MOD -- not found on https://huggingface.co/docs/transformers/model_doc/xmod#transformers.XmodForQuestionAnswering
     # YOSO
+    "uw-madison/yoso-4096"
 ]
 
 def qna(number):
@@ -85,7 +137,7 @@ def dataset(model_name):
     df["has_phd_info"] = ""
     df["phd_where"] = ""
     question_answerer = pipeline("question-answering", model=model_name)
-    for index, row in df.iterrows():
+    for index, row in tqdm(df.iterrows(), total=df.shape[0], desc="Progress"):
         try:
             response1 = question_answerer(question=qna(1), context=row["bio"])
             response2 = question_answerer(question=qna(2), context=row["bio"])
